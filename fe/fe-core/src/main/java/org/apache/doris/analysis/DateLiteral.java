@@ -1302,6 +1302,7 @@ public class DateLiteral extends LiteralExpr {
         boolean strictWeekNumberYearType = false;
         long strictWeekNumberYear = -1;
         boolean hourSystem12 = false; // hour in [0..12] and with am/pm
+        boolean hasFracPart = false; // time part include frac part, but scalar does not depend on time part
 
         char now;
         while (pFormat < endFormat && pValue < endValue) {
@@ -1431,6 +1432,7 @@ public class DateLiteral extends LiteralExpr {
                         }
                         this.microsecond = (long) (intValue * Math.pow(10, 6 - Math.min(6, tmp - pValue)));
                         partUsed |= fracPart;
+                        hasFracPart = true;
                         pValue = tmp;
                         break;
                     // AM/PM
@@ -1637,7 +1639,7 @@ public class DateLiteral extends LiteralExpr {
 
         // Compute timestamp type
         if ((partUsed & datePart) != 0) { // Ymd part only
-            if ((partUsed & fracPart) != 0) {
+            if ((partUsed & fracPart) != 0 && hasFracPart) {
                 this.type = Type.DATETIMEV2_WITH_MAX_SCALAR;
             } else if ((partUsed & timePart) != 0) {
                 this.type = ScalarType.getDefaultDateType(Type.DATETIME);
