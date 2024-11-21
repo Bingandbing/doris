@@ -454,7 +454,7 @@ public class DdlExecutor {
         }
     }
 
-    private static void executeCopyStmt(Env env, CopyStmt copyStmt) throws Exception {
+    public static void executeCopyStmt(Env env, CopyStmt copyStmt) throws Exception {
         CopyJob job = (CopyJob) (((CloudLoadManager) env.getLoadManager()).createLoadJobFromStmt(copyStmt));
         if (!copyStmt.isAsync()) {
             // wait for execute finished

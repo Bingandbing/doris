@@ -132,6 +132,7 @@ public enum PlanType {
     PHYSICAL_WINDOW,
 
     // commands
+    COPY_INTO_COMMAND,
     CREATE_POLICY_COMMAND,
     CREATE_TABLE_COMMAND,
     DELETE_COMMAND,
