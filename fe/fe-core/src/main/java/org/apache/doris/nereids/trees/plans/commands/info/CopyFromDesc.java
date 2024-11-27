@@ -17,9 +17,7 @@
 
 package org.apache.doris.nereids.trees.plans.commands.info;
 
-import org.apache.doris.analysis.BinaryPredicate;
 import org.apache.doris.analysis.CopyFromParam;
-import org.apache.doris.analysis.Expr;
 import org.apache.doris.analysis.SlotRef;
 import org.apache.doris.analysis.StageAndPattern;
 import org.apache.doris.analysis.TableName;
@@ -31,8 +29,12 @@ import org.apache.doris.catalog.OlapTable;
 import org.apache.doris.common.AnalysisException;
 import org.apache.doris.common.ErrorCode;
 import org.apache.doris.common.ErrorReport;
+import org.apache.doris.nereids.analyzer.UnboundSlot;
+import org.apache.doris.nereids.trees.expressions.EqualTo;
 import org.apache.doris.nereids.trees.expressions.Expression;
 import org.apache.doris.nereids.trees.expressions.NamedExpression;
+import org.apache.doris.nereids.trees.expressions.Slot;
+import org.apache.doris.nereids.util.ExpressionUtils;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -43,6 +45,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * copy from desc ==> copy from param
@@ -54,7 +57,7 @@ public class CopyFromDesc {
     private List<NamedExpression> exprList;
     private Optional<Expression> fileFilterExpr;
     private List<String> fileColumns;
-    private List<Expr> columnMappingList;
+    private List<Expression> columnMappingList;
     private List<String> targetColumns;
 
     public CopyFromDesc(StageAndPattern stageAndPattern) {
@@ -72,10 +75,34 @@ public class CopyFromDesc {
         this.targetColumns = targetColumns;
     }
 
+    public StageAndPattern getStageAndPattern() {
+        return stageAndPattern;
+    }
+
+    public List<Expression> getColumnMappingList() {
+        return columnMappingList;
+    }
+
+    public List<NamedExpression> getExprList() {
+        return exprList;
+    }
+
+    public List<String> getFileColumns() {
+        return fileColumns;
+    }
+
+    public Optional<Expression> getFileFilterExpr() {
+        return fileFilterExpr;
+    }
+
+    public List<String> getTargetColumns() {
+        return targetColumns;
+    }
+
     /**
      * analyze
      */
-    public void analyze(String fullDbName, TableName tableName, boolean useDeleteSign, String fileType)
+    public void validate(String fullDbName, TableName tableName, boolean useDeleteSign, String fileType)
             throws AnalysisException {
         if (exprList == null && fileFilterExpr == null && !useDeleteSign) {
             return;
@@ -148,10 +175,9 @@ public class CopyFromDesc {
                 ErrorReport.reportAnalysisException(ErrorCode.ERR_WRONG_VALUE_COUNT);
             }
             for (int i = 0; i < targetColumns.size(); i++) {
-            //                Expression expr = exprList.get(i);
-            //                BinaryPredicate binaryPredicate = new BinaryPredicate(BinaryPredicate.Operator.EQ,
-            //                        new SlotRef(null, targetColumns.get(i)), expr);
-            //                columnMappingList.add(binaryPredicate);
+                Expression expr = exprList.get(i);
+                EqualTo binaryPredicate = new EqualTo(new UnboundSlot(null, targetColumns.get(i)), expr);
+                columnMappingList.add(binaryPredicate);
             }
         } else {
             for (int i = 0; i < targetColumns.size(); i++) {
@@ -160,9 +186,8 @@ public class CopyFromDesc {
                 // mode. Because if the src data is an expr, strict mode judgment will
                 // not be performed.
                 if (!fileColumns.get(i).equalsIgnoreCase(targetColumns.get(i))) {
-                    BinaryPredicate binaryPredicate = new BinaryPredicate(BinaryPredicate.Operator.EQ,
-                            new SlotRef(null, targetColumns.get(i)),
-                            new SlotRef(null, fileColumns.get(i)));
+                    EqualTo binaryPredicate = new EqualTo(new UnboundSlot(null, targetColumns.get(i)),
+                            new UnboundSlot(null, fileColumns.get(i)));
                     columnMappingList.add(binaryPredicate);
                 }
             }
@@ -208,29 +233,29 @@ public class CopyFromDesc {
     private int getMaxFileColumnId() throws AnalysisException {
         int maxId = 0;
         if (exprList != null) {
-        //            int maxFileColumnId = getMaxFileColumnId(exprList);
-        //            maxId = maxId > maxFileColumnId ? maxId : maxFileColumnId;
+            int maxFileColumnId = getMaxFileFilterColumnId(
+                    exprList.stream().map(expr -> (Expression) expr).collect(Collectors.toList()));
+            maxId = maxId > maxFileColumnId ? maxId : maxFileColumnId;
         }
         if (fileFilterExpr != null) {
-        //            int maxFileColumnId = getMaxFileColumnId(Lists.newArrayList(fileFilterExpr));
-        //            maxId = maxId > maxFileColumnId ? maxId : maxFileColumnId;
+            int maxFileColumnId = getMaxFileFilterColumnId(Lists.newArrayList(fileFilterExpr.get()));
+            maxId = maxId > maxFileColumnId ? maxId : maxFileColumnId;
         }
         return maxId;
     }
 
-    private int getMaxFileColumnId(List<Expr> exprList) throws AnalysisException {
-        List<SlotRef> slotRefs = Lists.newArrayList();
-        Expr.collectList(exprList, SlotRef.class, slotRefs);
+    private int getMaxFileFilterColumnId(List<Expression> exprList) throws AnalysisException {
+        Set<Slot> slots = ExpressionUtils.getInputSlotSet(exprList);
         int maxId = 0;
-        for (SlotRef slotRef : slotRefs) {
-            int fileColumnId = getFileColumnIdOfSlotRef(slotRef);
+        for (Slot slot : slots) {
+            int fileColumnId = getFileColumnIdOfSlotRef((UnboundSlot) slot);
             maxId = fileColumnId < maxId ? maxId : fileColumnId;
         }
         return maxId;
     }
 
-    private int getFileColumnIdOfSlotRef(SlotRef slotRef) throws AnalysisException {
-        String columnName = slotRef.getColumnName();
+    private int getFileColumnIdOfSlotRef(UnboundSlot unboundSlot) throws AnalysisException {
+        String columnName = unboundSlot.getName();
         try {
             if (!columnName.startsWith(DOLLAR)) {
                 throw new AnalysisException("can not mix column name and dollar sign");

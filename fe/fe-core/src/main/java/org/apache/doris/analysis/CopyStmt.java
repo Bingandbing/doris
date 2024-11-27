@@ -80,8 +80,8 @@ public class CopyStmt extends DdlStmt implements NotFallbackInParser {
     private LabelName label = null;
     private BrokerDesc brokerDesc = null;
     private DataDescription dataDescription = null;
-    private final Map<String, String> brokerProperties = new HashMap<>();
-    private final Map<String, String> properties = new HashMap<>();
+    private Map<String, String> brokerProperties = new HashMap<>();
+    private Map<String, String> properties = new HashMap<>();
 
     @Getter
     private String stage;
@@ -108,6 +108,36 @@ public class CopyStmt extends DdlStmt implements NotFallbackInParser {
         if (optHints != null) {
             this.optHints = optHints.get(SET_VAR_KEY);
         }
+    }
+
+    /**
+     * Use for Nereids Planner.
+     */
+    public CopyStmt(TableName tableName, CopyFromParam copyFromParam,
+                    CopyIntoProperties copyProperties, Map<String, Map<String, String>> optHints, LabelName label,
+                    String stageId, StageType stageType, String stagePrefix, ObjectInfo objectInfo, String userName,
+                    Map<String, String> brokerProperties, Map<String, String> properties,
+                    DataDescription dataDescription) {
+        this.tableName = tableName;
+        this.copyFromParam = copyFromParam;
+        this.stage = copyFromParam.getStageAndPattern().getStageName();
+        this.copyIntoProperties = copyProperties;
+        if (optHints != null) {
+            this.optHints = optHints.get(SET_VAR_KEY);
+        }
+
+        this.label = label;
+        this.brokerDesc = null;
+        this.dataDescription = null;
+        this.brokerProperties = brokerProperties;
+        this.properties = properties;
+
+        this.stageId = stageId;
+        this.stageType = stageType;
+        this.stagePrefix = stagePrefix;
+        this.objectInfo = objectInfo;
+        this.userName = userName;
+        this.dataDescription = dataDescription;
     }
 
     @Override

@@ -43,7 +43,7 @@ public class CopyIntoCommand extends Command implements ForwardWithSync {
     @Override
     public void run(ConnectContext ctx, StmtExecutor executor) throws Exception {
         copyIntoInfo.validate(ctx);
-        CopyStmt copyStmt = new CopyStmt(null, null, null, null, null);
+        CopyStmt copyStmt = copyIntoInfo.toLegacyStatement();
         DdlExecutor.executeCopyStmt(ctx.getEnv(), copyStmt);
     }
 

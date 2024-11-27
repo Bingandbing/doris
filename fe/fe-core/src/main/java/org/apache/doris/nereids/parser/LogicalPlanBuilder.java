@@ -736,7 +736,11 @@ public class LogicalPlanBuilder extends DorisParserBaseVisitor<Object> {
     }
 
     private StageAndPattern getStageAndPattern(DorisParser.StageAndPatternContext ctx) {
-        return new StageAndPattern(ctx.stage.getText(), ctx.pattern.getText());
+        if (ctx.pattern != null) {
+            return new StageAndPattern(ctx.stage.getText(), ctx.pattern.getText());
+        } else {
+            return new StageAndPattern(ctx.stage.getText(), null);
+        }
     }
 
     @Override
@@ -797,7 +801,9 @@ public class LogicalPlanBuilder extends DorisParserBaseVisitor<Object> {
                     }
                 }
             }
-            copyInfoInfo = new CopyIntoInfo(tableName.build(), copyFromDesc, properties, parameterNames);
+            Map<String, Map<String, String>> setVarHint = Maps.newLinkedHashMap();
+            setVarHint.put("set_var", parameterNames);
+            copyInfoInfo = new CopyIntoInfo(tableName.build(), copyFromDesc, properties, setVarHint);
         } else {
             copyInfoInfo = new CopyIntoInfo(tableName.build(), copyFromDesc, properties, null);
         }

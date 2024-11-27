@@ -159,7 +159,7 @@ supportedDmlStatement
         (propertyClause)?
         (withRemoteStorageSystem)?                                     #export
     | replayCommand                                                    #replay
-    | COPY INTO selectHint name=multipartIdentifier columns=identifierList? FROM
+    | COPY INTO selectHint? name=multipartIdentifier columns=identifierList? FROM
             (stageAndPattern | (LEFT_PAREN SELECT selectColumnClause
                 FROM stageAndPattern whereClause? RIGHT_PAREN))
             properties=propertyClause?                                 #copyInto
