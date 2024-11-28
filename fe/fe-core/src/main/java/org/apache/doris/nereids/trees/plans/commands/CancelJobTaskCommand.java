@@ -26,6 +26,7 @@ import org.apache.doris.mysql.privilege.PrivPredicate;
 import org.apache.doris.nereids.analyzer.UnboundSlot;
 import org.apache.doris.nereids.trees.expressions.And;
 import org.apache.doris.nereids.trees.expressions.Expression;
+import org.apache.doris.nereids.trees.expressions.literal.IntegerLikeLiteral;
 import org.apache.doris.nereids.trees.expressions.literal.LargeIntLiteral;
 import org.apache.doris.nereids.trees.expressions.literal.StringLikeLiteral;
 import org.apache.doris.nereids.trees.plans.PlanType;
@@ -79,14 +80,17 @@ public class CancelJobTaskCommand extends Command implements ForwardWithSync {
             throw new AnalysisException("JobName value must is string");
         }
         this.jobName = ((StringLikeLiteral) expr.child(0).child(1)).getStringValue();
-        String taskIdInput = ((StringLikeLiteral) expr.child(1).child(0)).getStringValue();
+        if (!(expr.child(1).child(0) instanceof UnboundSlot)) {
+            throw new AnalysisException("JobName value must is string");
+        }
+        String taskIdInput = ((UnboundSlot) expr.child(1).child(0)).getName();
         if (!taskIdKey.equalsIgnoreCase(taskIdInput)) {
             throw new AnalysisException("Current not support " + taskIdInput);
         }
-        if (!(expr.child(1).child(1) instanceof LargeIntLiteral)) {
+        if (!(expr.child(1).child(1) instanceof IntegerLikeLiteral)) {
             throw new AnalysisException("task id  value must is large int");
         }
-        this.taskId = ((LargeIntLiteral) expr.child(1).child(1)).getLongValue();
+        this.taskId = ((IntegerLikeLiteral) expr.child(1).child(1)).getLongValue();
     }
 
     public void doRun(ConnectContext ctx) throws Exception {
