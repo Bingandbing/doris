@@ -17,7 +17,6 @@
 
 package org.apache.doris.nereids.parser;
 
-import jdk.internal.org.jline.reader.Parser;
 import org.apache.doris.analysis.ArithmeticExpr.Operator;
 import org.apache.doris.analysis.BrokerDesc;
 import org.apache.doris.analysis.ColumnNullableType;
